@@ -1,19 +1,33 @@
 import pygame
 
 
-if __name__ == '__main__':
+class ImageError(Exception):
+    pass
+
+
+class BackGround(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load("background.gif").convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.left, self.rect.top = (0, 0)
+
+
+if __name__ == "__main__":
     pygame.init()
-    size = width, height = 800, 400
+    size = width, height = 800, 600
+    pygame.display.set_caption("Reach the door")
+    pygame.display.set_icon(pygame.image.load("icon.gif"))
     screen = pygame.display.set_mode(size)
+    bg = BackGround()
 
     running = True
     while running:
         for event in pygame.event.get():
-            # при закрытии окна
             if event.type == pygame.QUIT:
                 running = False
 
-        # отрисовка и изменение свойств объектов
+        screen.blit(bg.image, bg.rect)
 
         pygame.display.flip()
     pygame.quit()
