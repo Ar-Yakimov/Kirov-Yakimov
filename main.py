@@ -29,11 +29,11 @@ class Character(pygame.sprite.Sprite):
         self.anim_time = 0.1
         self.current_time = 0
         self.gravity = 0.6
-        self.jump_speed = -20
+        self.jump_speed = -26
         self.on_ground = True
 
     def update_time_dependent(self, dt):
-        sleep(0.08)
+        sleep(0.06)
         if self.velocity.x > 0:
             self.images = self.img_r
         elif self.velocity.x < 0:
@@ -53,6 +53,7 @@ class Character(pygame.sprite.Sprite):
         if not self.on_ground:
             self.velocity.y += self.gravity
 
+        old_rect = self.rect.copy()
         self.rect.move_ip(*self.velocity)
 
         if self.rect.left < 0:
@@ -66,6 +67,27 @@ class Character(pygame.sprite.Sprite):
             self.rect.bottom = 600
             self.on_ground = True
             self.velocity.y = 0
+
+        for obj in all_objs:
+            if isinstance(obj, Platform):
+                if old_rect.colliderect(obj.rect) and not self.rect.colliderect(obj.rect):
+                    if self.velocity.y > 0 and old_rect.bottom <= obj.rect.top + abs(self.velocity.y):
+                        self.rect.bottom = obj.rect.top
+                        self.on_ground = True
+                        self.velocity.y = 0
+                    elif self.velocity.y < 0 and obj.rect.top <= old_rect.top <= obj.rect.bottom:
+                        self.rect.top = obj.rect.bottom
+                        self.velocity.y = 0
+
+                    if old_rect.right > obj.rect.left > old_rect.left:
+                        self.rect.right = obj.rect.left
+                        self.velocity.x = 0
+                    elif old_rect.left < obj.rect.right < old_rect.right:
+                        self.rect.left = obj.rect.right
+                        self.velocity.x = 0
+
+        if not self.on_ground and self.rect.bottom < 600:
+            self.velocity.y += self.gravity
 
     def jump(self):
         if self.on_ground:
@@ -106,8 +128,10 @@ if __name__ == "__main__":
 
     platform_1 = Platform("big", (10, 540))
     platform_2 = Platform("medium", (300, 485))
+    platform_3 = Platform("small", (560, 440))
+    platform_4 = Platform("small", (700, 360))
 
-    all_objs = pygame.sprite.Group(player, platform_1, platform_2)
+    all_objs = pygame.sprite.Group(player, platform_1, platform_2, platform_3, platform_4)
 
     running = True
     while running:
