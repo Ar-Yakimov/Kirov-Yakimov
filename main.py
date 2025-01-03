@@ -1,3 +1,5 @@
+from sys import platform
+
 import pygame
 from time import sleep
 
@@ -101,9 +103,9 @@ if __name__ == "__main__":
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()
     bg = BackGround()
-    player = Character([20, 500])
+    player = Character([20, 440])
 
-    platform_1 = Platform("big", (10, 10))
+    platform_1 = Platform("big", (10, 540))
 
     all_objs = pygame.sprite.Group(player, platform_1)
 
@@ -129,6 +131,28 @@ if __name__ == "__main__":
         all_objs.update(dt)
         screen.blit(bg.image, bg.rect)
         all_objs.draw(screen)
+        player.on_ground = False
+        for obj in all_objs:
+            if isinstance(obj, Platform):
+                if player.rect.colliderect(obj.rect):
+                    if player.velocity.y > 0 and player.rect.bottom <= obj.rect.top + abs(player.velocity.y):
+                        player.rect.bottom = obj.rect.top
+                        player.on_ground = True
+                        player.velocity.y = 0
+                    elif player.velocity.y < 0 and obj.rect.top <= player.rect.top <= obj.rect.bottom:
+                        player.rect.top = obj.rect.bottom
+                        player.velocity.y = 0
+
+                    if player.rect.right > obj.rect.left > player.rect.left:
+                        player.rect.right = obj.rect.left
+                        player.velocity.x = 0
+                    elif player.rect.left < obj.rect.right < player.rect.right:
+                        player.rect.left = obj.rect.right
+                        player.velocity.x = 0
+
+        if not player.on_ground:
+            if player.rect.bottom < 600:
+                player.velocity.y += player.gravity
 
         pygame.display.update()
     pygame.quit()
