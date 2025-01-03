@@ -28,6 +28,9 @@ class Character(pygame.sprite.Sprite):
         self.velocity = pygame.math.Vector2(0, 0)
         self.anim_time = 0.1
         self.current_time = 0
+        self.gravity = 0.6
+        self.jump_speed = -14
+        self.on_ground = True
 
     def update_time_dependent(self, dt):
         sleep(0.08)
@@ -36,6 +39,9 @@ class Character(pygame.sprite.Sprite):
             self.images = self.img_r
         elif self.velocity.x < 0:
             self.images = self.img_l
+
+        if not self.on_ground:
+            self.velocity.y += self.gravity
 
         self.current_time += dt
         if self.current_time >= self.anim_time:
@@ -47,6 +53,23 @@ class Character(pygame.sprite.Sprite):
 
     def update(self, dt):
         self.update_time_dependent(dt)
+
+        if self.rect.left < 0:
+            self.rect.left = 0
+        elif self.rect.right > 800:
+            self.rect.right = 800
+
+        if self.rect.top < 0:
+            self.rect.top = 0
+        elif self.rect.bottom >= 600:
+            self.rect.bottom = 600
+            self.on_ground = True
+            self.velocity.y = 0
+
+    def jump(self):
+        if self.on_ground:
+            self.velocity.y = self.jump_speed
+            self.on_ground = False
 
 
 if __name__ == "__main__":
@@ -75,15 +98,11 @@ if __name__ == "__main__":
                     player.velocity.x = 15
                 elif event.key == pygame.K_LEFT:
                     player.velocity.x = -15
-                elif event.key == pygame.K_DOWN:
-                    player.velocity.y = 15
                 elif event.key == pygame.K_UP:
-                    player.velocity.y = -15
+                    player.jump()
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT:
                     player.velocity.x = 0
-                elif event.key == pygame.K_DOWN or event.key == pygame.K_UP:
-                    player.velocity.y = 0
 
         all_objs.update(dt)
         screen.blit(bg.image, bg.rect)
