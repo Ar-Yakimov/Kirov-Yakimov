@@ -1,5 +1,3 @@
-from sys import platform
-
 import pygame
 from time import sleep
 
@@ -17,7 +15,7 @@ class BackGround(pygame.sprite.Sprite):
 
 
 class Character(pygame.sprite.Sprite):
-    images = [pygame.image.load(rf"character\sprite_{i}.gif") for i in range(1, 4)]
+    images = [pygame.image.load(rf"character/sprite_{i}.gif") for i in range(1, 4)]
     size = (50, 100)
 
     def __init__(self, pos):
@@ -31,12 +29,11 @@ class Character(pygame.sprite.Sprite):
         self.anim_time = 0.1
         self.current_time = 0
         self.gravity = 0.6
-        self.jump_speed = -14
+        self.jump_speed = -20
         self.on_ground = True
 
     def update_time_dependent(self, dt):
         sleep(0.08)
-
         if self.velocity.x > 0:
             self.images = self.img_r
         elif self.velocity.x < 0:
@@ -51,10 +48,12 @@ class Character(pygame.sprite.Sprite):
             self.index = (self.index + 1) % len(self.images)
             self.image = self.images[self.index]
 
-        self.rect.move_ip(*self.velocity)
-
     def update(self, dt):
         self.update_time_dependent(dt)
+        if not self.on_ground:
+            self.velocity.y += self.gravity
+
+        self.rect.move_ip(*self.velocity)
 
         if self.rect.left < 0:
             self.rect.left = 0
@@ -83,8 +82,8 @@ class Platform(pygame.sprite.Sprite):
 
     sizes = {
         "big": (158, 40),
-        "medium": (75, 40),
-        "small": (113, 40)
+        "medium": (113, 40),
+        "small": (75, 40)
     }
 
     def __init__(self, kind: str, pos: tuple[int]):
@@ -106,12 +105,12 @@ if __name__ == "__main__":
     player = Character([20, 440])
 
     platform_1 = Platform("big", (10, 540))
+    platform_2 = Platform("medium", (300, 485))
 
-    all_objs = pygame.sprite.Group(player, platform_1)
+    all_objs = pygame.sprite.Group(player, platform_1, platform_2)
 
     running = True
     while running:
-
         dt = clock.tick(FPS) / 1000
 
         for event in pygame.event.get():
@@ -131,6 +130,7 @@ if __name__ == "__main__":
         all_objs.update(dt)
         screen.blit(bg.image, bg.rect)
         all_objs.draw(screen)
+
         player.on_ground = False
         for obj in all_objs:
             if isinstance(obj, Platform):
@@ -150,9 +150,9 @@ if __name__ == "__main__":
                         player.rect.left = obj.rect.right
                         player.velocity.x = 0
 
-        if not player.on_ground:
-            if player.rect.bottom < 600:
-                player.velocity.y += player.gravity
+        if not player.on_ground and player.rect.bottom < 600:
+            player.velocity.y += player.gravity
 
         pygame.display.update()
+
     pygame.quit()
