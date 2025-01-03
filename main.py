@@ -72,6 +72,26 @@ class Character(pygame.sprite.Sprite):
             self.on_ground = False
 
 
+class Platform(pygame.sprite.Sprite):
+    images = {
+        "big": pygame.image.load(r"platform/platform_big.gif"),
+        "medium": pygame.image.load(r"platform/platform_medium.gif"),
+        "small": pygame.image.load(r"platform/platform_small.gif")
+    }
+
+    sizes = {
+        "big": (315, 80),
+        "medium": (225, 80),
+        "small": (150, 80)
+    }
+
+    def __init__(self, kind: str, pos: tuple[int]):
+        super().__init__()
+        self.image = self.images[kind]
+        self.size = self.sizes[kind]
+        self.rect = pygame.Rect(pos, self.size)
+
+
 if __name__ == "__main__":
     pygame.init()
     size = width, height = 800, 600
@@ -83,7 +103,9 @@ if __name__ == "__main__":
     bg = BackGround()
     player = Character([20, 500])
 
-    all_objs = pygame.sprite.Group(player)
+    platform_1 = Platform("big", (10, 10))
+
+    all_objs = pygame.sprite.Group(player, platform_1)
 
     running = True
     while running:
