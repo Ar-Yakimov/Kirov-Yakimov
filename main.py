@@ -80,9 +80,9 @@ class Platform(pygame.sprite.Sprite):
     }
 
     sizes = {
-        "big": (315, 80),
-        "medium": (225, 80),
-        "small": (150, 80)
+        "big": (158, 40),
+        "medium": (75, 40),
+        "small": (113, 40)
     }
 
     def __init__(self, kind: str, pos: tuple[int]):
