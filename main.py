@@ -29,7 +29,7 @@ class Character(pygame.sprite.Sprite):
         self.anim_time = 0.1
         self.current_time = 0
         self.gravity = 0.6
-        self.jump_speed = -26
+        self.jump_speed = -28
         self.on_ground = True
 
     def update_time_dependent(self, dt):
@@ -108,7 +108,7 @@ class Platform(pygame.sprite.Sprite):
         "small": (75, 40)
     }
 
-    def __init__(self, kind: str, pos: tuple[int]):
+    def __init__(self, kind: str, pos: tuple[int, int]):
         super().__init__()
         self.image = self.images[kind]
         self.size = self.sizes[kind]
@@ -128,10 +128,16 @@ if __name__ == "__main__":
 
     platform_1 = Platform("big", (10, 540))
     platform_2 = Platform("medium", (300, 485))
-    platform_3 = Platform("small", (560, 440))
-    platform_4 = Platform("small", (700, 360))
+    platform_3 = Platform("small", (500, 380))
+    platform_4 = Platform("medium", (650, 280))
+    platform_5 = Platform("big", (280, 220))
 
-    all_objs = pygame.sprite.Group(player, platform_1, platform_2, platform_3, platform_4)
+    all_objs = pygame.sprite.Group(player,
+                                   platform_1,
+                                   platform_2,
+                                   platform_3,
+                                   platform_4,
+                                   platform_5)
 
     running = True
     while running:
