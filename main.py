@@ -31,6 +31,7 @@ class Character(pygame.sprite.Sprite):
         self.gravity = 0.6
         self.jump_speed = -28
         self.on_ground = True
+        self.show = True
 
     def update_time_dependent(self, dt):
         sleep(0.06)
@@ -49,45 +50,48 @@ class Character(pygame.sprite.Sprite):
             self.image = self.images[self.index]
 
     def update(self, dt):
-        self.update_time_dependent(dt)
-        if not self.on_ground:
-            self.velocity.y += self.gravity
+        if self.show:
+            self.update_time_dependent(dt)
+            if not self.on_ground:
+                self.velocity.y += self.gravity
 
-        old_rect = self.rect.copy()
-        self.rect.move_ip(*self.velocity)
+            old_rect = self.rect.copy()
+            self.rect.move_ip(*self.velocity)
 
-        if self.rect.left < 0:
-            self.rect.left = 0
-        elif self.rect.right > 800:
-            self.rect.right = 800
+            if self.rect.left < 0:
+                self.rect.left = 0
+            elif self.rect.right > 800:
+                self.rect.right = 800
 
-        if self.rect.top < 0:
-            self.rect.top = 0
-        elif self.rect.bottom >= 600:
-            self.rect.bottom = 600
-            self.on_ground = True
-            self.velocity.y = 0
+            if self.rect.top < 0:
+                self.rect.top = 0
+            elif self.rect.bottom >= 600:
+                self.rect.bottom = 600
+                self.on_ground = True
+                self.velocity.y = 0
 
-        for obj in all_objs:
-            if isinstance(obj, Platform):
-                if old_rect.colliderect(obj.rect) and not self.rect.colliderect(obj.rect):
-                    if self.velocity.y > 0 and old_rect.bottom <= obj.rect.top + abs(self.velocity.y):
-                        self.rect.bottom = obj.rect.top
-                        self.on_ground = True
-                        self.velocity.y = 0
-                    elif self.velocity.y < 0 and obj.rect.top <= old_rect.top <= obj.rect.bottom:
-                        self.rect.top = obj.rect.bottom
-                        self.velocity.y = 0
+            for obj in all_objs:
+                if isinstance(obj, Platform):
+                    if old_rect.colliderect(obj.rect) and not self.rect.colliderect(obj.rect):
+                        if self.velocity.y > 0 and old_rect.bottom <= obj.rect.top + abs(self.velocity.y):
+                            self.rect.bottom = obj.rect.top
+                            self.on_ground = True
+                            self.velocity.y = 0
+                        elif self.velocity.y < 0 and obj.rect.top <= old_rect.top <= obj.rect.bottom:
+                            self.rect.top = obj.rect.bottom
+                            self.velocity.y = 0
 
-                    if old_rect.right > obj.rect.left > old_rect.left:
-                        self.rect.right = obj.rect.left
-                        self.velocity.x = 0
-                    elif old_rect.left < obj.rect.right < old_rect.right:
-                        self.rect.left = obj.rect.right
-                        self.velocity.x = 0
+                        if old_rect.right > obj.rect.left > old_rect.left:
+                            self.rect.right = obj.rect.left
+                            self.velocity.x = 0
+                        elif old_rect.left < obj.rect.right < old_rect.right:
+                            self.rect.left = obj.rect.right
+                            self.velocity.x = 0
 
-        if not self.on_ground and self.rect.bottom < 600:
-            self.velocity.y += self.gravity
+            if not self.on_ground and self.rect.bottom < 600:
+                self.velocity.y += self.gravity
+        else:
+            self.image = pygame.image.load("player_faded.gif")
 
     def jump(self):
         if self.on_ground:
@@ -114,6 +118,32 @@ class Platform(pygame.sprite.Sprite):
         self.size = self.sizes[kind]
         self.rect = pygame.Rect(pos, self.size)
 
+class Door(pygame.sprite.Sprite):
+    images = {
+        "close": pygame.image.load(r"door/door_close.gif"),
+        "open": pygame.image.load(r"door/door_open.gif")
+    }
+    size = (65, 115)
+
+    def __init__(self, *pos):
+        super().__init__()
+        self.rect = pygame.Rect(pos, self.size)
+        self.image = self.images["close"]
+        self.is_open = False
+        self.open_time = 0
+        self.door_open_duration = 400
+
+    def update(self, dt):
+        if self.rect.colliderect(player.rect) and player.show and not self.is_open:
+            player.show = False
+            self.is_open = True
+            self.image = self.images["open"]
+            self.open_time = pygame.time.get_ticks()
+
+        if self.is_open and (pygame.time.get_ticks() - self.open_time > self.door_open_duration):
+            self.is_open = False
+            self.image = self.images["close"]
+
 
 if __name__ == "__main__":
     pygame.init()
@@ -130,14 +160,14 @@ if __name__ == "__main__":
     platform_2 = Platform("medium", (300, 485))
     platform_3 = Platform("small", (500, 380))
     platform_4 = Platform("medium", (650, 280))
-    platform_5 = Platform("big", (280, 220))
+    door = Door(680, 165)
 
     all_objs = pygame.sprite.Group(player,
                                    platform_1,
                                    platform_2,
                                    platform_3,
                                    platform_4,
-                                   platform_5)
+                                   door)
 
     running = True
     while running:
