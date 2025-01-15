@@ -1,7 +1,6 @@
 import pygame
 from time import sleep
 
-
 class ImageError(Exception):
     pass
 
@@ -15,6 +14,7 @@ class BackGround(pygame.sprite.Sprite):
 
 
 class Character(pygame.sprite.Sprite):
+    win = None
     images = [pygame.image.load(rf"character/sprite_{i}.gif") for i in range(1, 4)]
     size = (50, 100)
 
@@ -136,6 +136,7 @@ class Door(pygame.sprite.Sprite):
     def update(self, dt):
         if self.rect.colliderect(player.rect) and player.show and not self.is_open:
             player.show = False
+            player.win = True
             self.is_open = True
             self.image = self.images["open"]
             self.open_time = pygame.time.get_ticks()
@@ -143,6 +144,24 @@ class Door(pygame.sprite.Sprite):
         if self.is_open and (pygame.time.get_ticks() - self.open_time > self.door_open_duration):
             self.is_open = False
             self.image = self.images["close"]
+
+class Button(pygame.sprite.Sprite):
+    def __init__(self, text, pos, size):
+        super().__init__()
+        self.image = pygame.Surface(size)
+        self.image.fill((241, 8, 150))
+        self.rect = self.image.get_rect(topleft=pos)
+        self.font = pygame.font.Font(None, 25)
+        self.text = text
+
+    def draw(self):
+        pygame.draw.rect(screen, (241, 8, 150), self.rect)
+        text_surface = self.font.render(self.text, True, (0, 0, 0))
+        text_rect = text_surface.get_rect(center=self.rect.center)
+        screen.blit(text_surface, text_rect)
+
+    def is_clicked(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)
 
 
 if __name__ == "__main__":
@@ -169,9 +188,14 @@ if __name__ == "__main__":
                                    platform_4,
                                    door)
 
+    font = pygame.font.Font(None, 50)
+
+    NEW_GAME = True
+
     running = True
     while running:
         dt = clock.tick(FPS) / 1000
+        screen.blit(bg.image, bg.rect)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -187,32 +211,45 @@ if __name__ == "__main__":
                 if event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT:
                     player.velocity.x = 0
 
-        all_objs.update(dt)
-        screen.blit(bg.image, bg.rect)
-        all_objs.draw(screen)
+            if NEW_GAME and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                btn_in_pos = (300, 250)
+                btn_in_size = (150, 100)
+                btn_in = Button("Начать", btn_in_pos, btn_in_size)
+                if btn_in.is_clicked(event.pos):
+                    NEW_GAME = False
 
-        player.on_ground = False
-        for obj in all_objs:
-            if isinstance(obj, Platform):
-                if player.rect.colliderect(obj.rect):
-                    if player.velocity.y > 0 and player.rect.bottom <= obj.rect.top + abs(player.velocity.y):
-                        player.rect.bottom = obj.rect.top
-                        player.on_ground = True
-                        player.velocity.y = 0
-                    elif player.velocity.y < 0 and obj.rect.top <= player.rect.top <= obj.rect.bottom:
-                        player.rect.top = obj.rect.bottom
-                        player.velocity.y = 0
+        if NEW_GAME:
+            text = font.render("Нажмите, чтобы начать игру", True, (0, 0, 0))
+            screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
+            btn_in = Button("Начать", (275, 250), (250, 100))
+            btn_in.draw()
+        else:
+            all_objs.update(dt)
+            all_objs.draw(screen)
 
-                    if player.rect.right > obj.rect.left > player.rect.left:
-                        player.rect.right = obj.rect.left
-                        player.velocity.x = 0
-                    elif player.rect.left < obj.rect.right < player.rect.right:
-                        player.rect.left = obj.rect.right
-                        player.velocity.x = 0
+            player.on_ground = False
+            for obj in all_objs:
+                if isinstance(obj, Platform):
+                    if player.rect.colliderect(obj.rect):
+                        if player.velocity.y > 0 and player.rect.bottom <= obj.rect.top + abs(player.velocity.y):
+                            player.rect.bottom = obj.rect.top
+                            player.on_ground = True
+                            player.velocity.y = 0
+                        elif player.velocity.y < 0 and obj.rect.top <= player.rect.top <= obj.rect.bottom:
+                            player.rect.top = obj.rect.bottom
+                            player.velocity.y = 0
 
-        if not player.on_ground and player.rect.bottom < 600:
-            player.velocity.y += player.gravity
+                        if player.rect.right > obj.rect.left > player.rect.left:
+                            player.rect.right = obj.rect.left
+                            player.velocity.x = 0
+                        elif player.rect.left < obj.rect.right < player.rect.right:
+                            player.rect.left = obj.rect.right
+                            player.velocity.x = 0
+
+            if not player.on_ground and player.rect.bottom < height:
+                player.velocity.y += player.gravity
 
         pygame.display.update()
 
     pygame.quit()
+
