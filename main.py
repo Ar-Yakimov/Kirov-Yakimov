@@ -1,5 +1,8 @@
+import sys
+
 import pygame
 from time import sleep
+
 
 class ImageError(Exception):
     pass
@@ -14,7 +17,6 @@ class BackGround(pygame.sprite.Sprite):
 
 
 class Character(pygame.sprite.Sprite):
-    win = None
     images = [pygame.image.load(rf"character/sprite_{i}.gif") for i in range(1, 4)]
     size = (50, 100)
 
@@ -32,6 +34,7 @@ class Character(pygame.sprite.Sprite):
         self.jump_speed = -28
         self.on_ground = True
         self.show = True
+        self.win = None
 
     def update_time_dependent(self, dt):
         sleep(0.06)
@@ -66,9 +69,8 @@ class Character(pygame.sprite.Sprite):
             if self.rect.top < 0:
                 self.rect.top = 0
             elif self.rect.bottom >= 600:
-                self.rect.bottom = 600
-                self.on_ground = True
-                self.velocity.y = 0
+                self.win = False
+                self.show = False
 
             for obj in all_objs:
                 if isinstance(obj, Platform):
@@ -98,6 +100,11 @@ class Character(pygame.sprite.Sprite):
             self.velocity.y = self.jump_speed
             self.on_ground = False
 
+    def reset(self):
+        self.win = None
+        self.show = True
+        self.on_ground = True
+
 
 class Platform(pygame.sprite.Sprite):
     images = {
@@ -117,6 +124,7 @@ class Platform(pygame.sprite.Sprite):
         self.image = self.images[kind]
         self.size = self.sizes[kind]
         self.rect = pygame.Rect(pos, self.size)
+
 
 class Door(pygame.sprite.Sprite):
     images = {
@@ -144,6 +152,7 @@ class Door(pygame.sprite.Sprite):
         if self.is_open and (pygame.time.get_ticks() - self.open_time > self.door_open_duration):
             self.is_open = False
             self.image = self.images["close"]
+
 
 class Button(pygame.sprite.Sprite):
     def __init__(self, text, pos, size):
@@ -211,18 +220,34 @@ if __name__ == "__main__":
                 if event.key == pygame.K_RIGHT or event.key == pygame.K_LEFT:
                     player.velocity.x = 0
 
-            if NEW_GAME and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                btn_in_pos = (300, 250)
-                btn_in_size = (150, 100)
-                btn_in = Button("Начать", btn_in_pos, btn_in_size)
+            if (NEW_GAME or player.win is not None) and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_in.is_clicked(event.pos):
                     NEW_GAME = False
+                elif btn_out.is_clicked(event.pos):
+                    pygame.quit()
+                    sys.exit()
+                elif "btn_rsrt" in globals():
+                    if btn_rsrt.is_clicked(event.pos):
+                        player.reset()
 
         if NEW_GAME:
             text = font.render("Нажмите, чтобы начать игру", True, (0, 0, 0))
             screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
             btn_in = Button("Начать", (275, 250), (250, 100))
+            btn_out = Button("Выход", (275, 400), (250, 100))
             btn_in.draw()
+            btn_out.draw()
+        elif player.win is not None:
+            if player.win is False:
+                text = font.render("Вы проиграли!", True, (0, 0, 0))
+                screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
+                btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                btn_rsrt.draw()
+            elif player.win is True:
+                text = font.render("Вы победили!", True, (0, 0, 0))
+                screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
+                btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                btn_rsrt.draw()
         else:
             all_objs.update(dt)
             all_objs.draw(screen)
@@ -252,4 +277,3 @@ if __name__ == "__main__":
         pygame.display.update()
 
     pygame.quit()
-
