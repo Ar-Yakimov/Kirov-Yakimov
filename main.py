@@ -23,6 +23,7 @@ class Character(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__()
         self.rect = pygame.Rect(pos, self.size)
+        self.start = pos
         self.img_r = self.images
         self.img_l = [pygame.transform.flip(image, True, False) for image in self.images]
         self.index = 0
@@ -104,6 +105,7 @@ class Character(pygame.sprite.Sprite):
         self.win = None
         self.show = True
         self.on_ground = True
+        self.rect = pygame.Rect(self.start, self.size)
 
 
 class Platform(pygame.sprite.Sprite):
@@ -221,12 +223,12 @@ if __name__ == "__main__":
                     player.velocity.x = 0
 
             if (NEW_GAME or player.win is not None) and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                if btn_in.is_clicked(event.pos):
+                if btn_in.is_clicked(event.pos) and player.win is None:
                     NEW_GAME = False
                 elif btn_out.is_clicked(event.pos):
                     pygame.quit()
                     sys.exit()
-                elif "btn_rsrt" in globals():
+                elif player.win is not None:
                     if btn_rsrt.is_clicked(event.pos):
                         player.reset()
 
@@ -242,11 +244,15 @@ if __name__ == "__main__":
                 text = font.render("Вы проиграли!", True, (0, 0, 0))
                 screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
                 btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                btn_out = Button("Выход", (275, 400), (250, 100))
+                btn_out.draw()
                 btn_rsrt.draw()
             elif player.win is True:
                 text = font.render("Вы победили!", True, (0, 0, 0))
                 screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
                 btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                btn_out = Button("Выход", (275, 400), (250, 100))
+                btn_out.draw()
                 btn_rsrt.draw()
         else:
             all_objs.update(dt)
