@@ -1,13 +1,35 @@
+import random
 import sys
 from time import sleep
 
 import pygame
 
-'''Импорт модулей'''
+
+#  Импорт модулей
 
 
-class ImageError(Exception):
-    pass  # создание исключения
+class ParticleSystem(pygame.sprite.Sprite):
+    """Источник частиц"""
+    images = [pygame.image.load(r"particle.gif")]
+    for scale in (2, 4, 6):
+        images.append(pygame.transform.scale(images[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        """Инициализация"""
+        super().__init__()
+        self.image = random.choice(self.images)
+        self.rect = self.image.get_rect()
+
+        self.velocity = pygame.math.Vector2(dx, dy)
+        self.rect.x, self.rect.y = pos
+
+        self.gravity = player.gravity
+
+    def update(self):
+        self.velocity.y += self.gravity
+        self.rect.move_ip(*self.velocity)
+        if not self.rect.colliderect((0, 0, width, height)):
+            self.kill()
 
 
 class BackGround(pygame.sprite.Sprite):
@@ -39,7 +61,7 @@ class Character(pygame.sprite.Sprite):
         self.gravity = 0.6  # гравитация
         self.jump_speed = -28  # высота прыжка
         self.on_ground = True  # нахождение в полёте
-        self.show = True   # нужно ли показывать персонажа
+        self.show = True  # нужно ли показывать персонажа
         self.win = None  # флаг победы
 
     def update_time_dependent(self, dt):
@@ -99,7 +121,7 @@ class Character(pygame.sprite.Sprite):
             if not self.on_ground and self.rect.bottom < 600:  # применяем падение
                 self.velocity.y += self.gravity
         else:
-            self.image = pygame.image.load("player_faded.gif")  # прячем игрока
+            self.kill()  # прячем игрока
 
     def jump(self):
         if self.on_ground:  # применяем отрицательную вертикальную скорость
