@@ -80,6 +80,11 @@ class Character(pygame.sprite.Sprite):
             self.index = (self.index + 1) % len(self.images)
             self.image = self.images[self.index]
 
+    @staticmethod
+    def create_particle(pos, count):
+        for _ in range(count):
+            ParticleSystem(pos, *[random.choice(range(-5, 6)) for _ in range(2)])
+
     def update(self, dt):
         if self.show:  # если спрайт виден
             self.update_time_dependent(dt)
