@@ -1,4 +1,6 @@
+import os
 import random
+import re
 import sys
 from time import sleep
 
@@ -8,9 +10,39 @@ import pygame
 #  Импорт модулей
 
 
+class LVL_parser:
+    root_point = r"environments/"
+
+    def __init__(self):
+        self.data = [self.unpack(self.root_point + file) for file in os.listdir(self.root_point)]
+
+    @staticmethod
+    def unpack(file):
+        with open(file=file, mode="r") as source:
+            raw = source.read()
+            char = list(map(int, re.search(r"CHAR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))
+            door = list(map(int, re.search(r"DOOR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))
+            blocks = [(m[0].lower(), tuple(map(int, m[1].split(';')))) for m in
+                      re.findall(r"(\w+)\s\|\s\{([\d;]+)\}", raw[raw.index("BLOCKS"):])]
+            group = pygame.sprite.Group(Character(char), Door(*door), *(Platform(size, pos) for size, pos in blocks))
+        return group
+
+    def __iter__(self):
+        yield from self.data
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, item):
+        try:
+            return self.data[item]
+        except IndexError:
+            raise FileNotFoundError(f"File {self.root_point + f"lvl_{item + 1}.lvl"} doesn`t exist!")
+
+
 class ParticleSystem(pygame.sprite.Sprite):
     """Источник частиц"""
-    images = [pygame.image.load(r"particle.gif")]
+    images = [pygame.image.load(r"sprites/particle.gif")]
     for scale in (2, 4, 6):
         images.append(pygame.transform.scale(images[0], (scale, scale)))
 
@@ -36,14 +68,14 @@ class BackGround(pygame.sprite.Sprite):
     def __init__(self):
         """Создание заднего фона"""
         super().__init__()
-        self.image = pygame.image.load("background.gif").convert_alpha()
+        self.image = pygame.image.load("sprites/background.gif").convert_alpha()
         self.rect = self.image.get_rect()
         self.rect.left, self.rect.top = (0, 0)
 
 
 class Character(pygame.sprite.Sprite):
     """Спрайт игрока"""
-    images = [pygame.image.load(rf"character/sprite_{i}.gif") for i in range(1, 4)]
+    images = [pygame.image.load(rf"sprites/character/sprite_{i}.gif") for i in range(1, 4)]
     size = (50, 100)
 
     def __init__(self, pos):
@@ -63,6 +95,7 @@ class Character(pygame.sprite.Sprite):
         self.on_ground = True  # нахождение в полёте
         self.show = True  # нужно ли показывать персонажа
         self.win = None  # флаг победы
+        self.particles = pygame.sprite.Group()
 
     def update_time_dependent(self, dt):
         sleep(0.06)  # задержка анимации
@@ -80,16 +113,20 @@ class Character(pygame.sprite.Sprite):
             self.index = (self.index + 1) % len(self.images)
             self.image = self.images[self.index]
 
-    @staticmethod
-    def create_particle(pos, count):
+    def create_particle(self, pos, count):
         for _ in range(count):
-            ParticleSystem(pos, *[random.choice(range(-5, 6)) for _ in range(2)])
+            particle = ParticleSystem(pos, *[random.choice(range(-5, 6)) for _ in range(2)])
+            self.particles.add(particle)
 
     def update(self, dt):
         if self.show:  # если спрайт виден
             self.update_time_dependent(dt)
+            self.particles.update()
             if not self.on_ground:  # применяем падение
                 self.velocity.y += self.gravity
+
+            if abs(self.velocity.x) != 0:
+                self.create_particle([self.rect.centerx, self.rect.bottom], 10)
 
             old_rect = self.rect.copy()  # передвигаем спрайт
             self.rect.move_ip(*self.velocity)
@@ -143,9 +180,9 @@ class Character(pygame.sprite.Sprite):
 
 class Platform(pygame.sprite.Sprite):
     images = {
-        "big": pygame.image.load(r"platform/platform_big.gif"),
-        "medium": pygame.image.load(r"platform/platform_medium.gif"),
-        "small": pygame.image.load(r"platform/platform_small.gif")
+        "big": pygame.image.load(r"sprites/platform/platform_big.gif"),
+        "medium": pygame.image.load(r"sprites/platform/platform_medium.gif"),
+        "small": pygame.image.load(r"sprites/platform/platform_small.gif")
     }  # все картинки
 
     sizes = {
@@ -164,8 +201,8 @@ class Platform(pygame.sprite.Sprite):
 
 class Door(pygame.sprite.Sprite):
     images = {
-        "close": pygame.image.load(r"door/door_close.gif"),
-        "open": pygame.image.load(r"door/door_open.gif")
+        "close": pygame.image.load(r"sprites/door/door_close.gif"),
+        "open": pygame.image.load(r"sprites/door/door_open.gif")
     }  # картинки разных состояний
     size = (65, 115)
 
@@ -218,24 +255,13 @@ if __name__ == "__main__":
     size = width, height = 800, 600
     FPS = 60
     pygame.display.set_caption("Reach the door")
-    pygame.display.set_icon(pygame.image.load("icon.gif"))
+    pygame.display.set_icon(pygame.image.load("sprites/icon.gif"))
     screen = pygame.display.set_mode(size)
     clock = pygame.time.Clock()  # создаём часы для анимации
     bg = BackGround()  # задаём задний фон
-    player = Character([20, 440])  # создаём игрока
-    # создание платформ
-    platform_1 = Platform("big", (10, 540))
-    platform_2 = Platform("medium", (300, 485))
-    platform_3 = Platform("small", (500, 380))
-    platform_4 = Platform("medium", (650, 280))
-    door = Door(680, 165)  # создание двери
 
-    all_objs = pygame.sprite.Group(player,
-                                   platform_1,
-                                   platform_2,
-                                   platform_3,
-                                   platform_4,
-                                   door)  # создание основной группы
+    parser = LVL_parser()
+    level = 0
 
     font = pygame.font.Font(None, 50)  # определение шрифта
 
@@ -243,6 +269,8 @@ if __name__ == "__main__":
 
     running = True  # основной цикл
     while running:
+        all_objs = parser[level]
+        player = all_objs.sprites()[0]
         dt = clock.tick(FPS) / 1000  # изменение времени
         screen.blit(bg.image, bg.rect)  # добавление фона
 
@@ -266,9 +294,12 @@ if __name__ == "__main__":
                 elif btn_out.is_clicked(event.pos):  # выход из игры
                     pygame.quit()
                     sys.exit()
-                elif player.win is not None:
-                    if btn_rsrt.is_clicked(event.pos):  # перезапуск
+                elif player.win is False:  # перезапуск
+                    if btn_rsrt.is_clicked(event.pos):
                         player.reset()
+                elif player.win is True:
+                    if btn_next.is_clicked(event.pos):
+                        level += 1
 
         if NEW_GAME:  # создать экран новой игры
             text = font.render("Нажмите, чтобы начать игру", True, (0, 0, 0))
@@ -288,10 +319,10 @@ if __name__ == "__main__":
             elif player.win is True:  # экран победы
                 text = font.render("Вы победили!", True, (0, 0, 0))
                 screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
-                btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                btn_next = Button("Дальше", (275, 250), (250, 100))
                 btn_out = Button("Выход", (275, 400), (250, 100))
                 btn_out.draw()
-                btn_rsrt.draw()
+                btn_next.draw()
         else:  # обновление экрана
             all_objs.update(dt)
             all_objs.draw(screen)
