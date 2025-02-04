@@ -298,8 +298,12 @@ if __name__ == "__main__":
                     if btn_rsrt.is_clicked(event.pos):
                         player.reset()
                 elif player.win is True:
-                    if btn_next.is_clicked(event.pos):
-                        level += 1
+                    if level != 2:
+                        if btn_next.is_clicked(event.pos):
+                            level += 1
+                    else:
+                        if btn_rsrt.is_clicked(event.pos):
+                            player.reset()
 
         if NEW_GAME:  # создать экран новой игры
             text = font.render("Нажмите, чтобы начать игру", True, (0, 0, 0))
@@ -319,10 +323,14 @@ if __name__ == "__main__":
             elif player.win is True:  # экран победы
                 text = font.render("Вы победили!", True, (0, 0, 0))
                 screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
-                btn_next = Button("Дальше", (275, 250), (250, 100))
                 btn_out = Button("Выход", (275, 400), (250, 100))
                 btn_out.draw()
-                btn_next.draw()
+                if level != 2:
+                    btn_next = Button("Дальше", (275, 250), (250, 100))
+                    btn_next.draw()
+                else:
+                    btn_rsrt = Button("Заново", (275, 250), (250, 100))
+                    btn_rsrt.draw()
         else:  # обновление экрана
             all_objs.update(dt)
             all_objs.draw(screen)
