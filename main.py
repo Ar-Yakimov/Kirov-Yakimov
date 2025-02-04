@@ -42,9 +42,7 @@ class LVL_parser:
 
 class ParticleSystem(pygame.sprite.Sprite):
     """Источник частиц"""
-    images = [pygame.image.load(r"sprites/particle.gif")]
-    for scale in (2, 4, 6):
-        images.append(pygame.transform.scale(images[0], (scale, scale)))
+    images = [pygame.transform.scale(pygame.image.load(r"sprites/particle.gif"), (scale, scale)) for scale in (4, 6, 8)]
 
     def __init__(self, pos, dx, dy):
         """Инициализация"""
@@ -60,7 +58,7 @@ class ParticleSystem(pygame.sprite.Sprite):
     def update(self):
         self.velocity.y += self.gravity
         self.rect.move_ip(*self.velocity)
-        if not self.rect.colliderect((0, 0, width, height)):
+        if not (0 <= self.rect.x <= width and 0 <= self.rect.y <= height):
             self.kill()
 
 
@@ -115,18 +113,21 @@ class Character(pygame.sprite.Sprite):
 
     def create_particle(self, pos, count):
         for _ in range(count):
-            particle = ParticleSystem(pos, *[random.choice(range(-5, 6)) for _ in range(2)])
+            if self.velocity.x < 0:
+                particle = ParticleSystem(pos, random.randint(2, 4), random.randint(-8, -2))
+            else:
+                particle = ParticleSystem(pos, random.randint(-4, -2), random.randint(-8, -2))
             self.particles.add(particle)
 
     def update(self, dt):
         if self.show:  # если спрайт виден
             self.update_time_dependent(dt)
-            self.particles.update()
+
+            if abs(self.velocity.x) > 0 and self.on_ground:
+                self.create_particle([self.rect.centerx, self.rect.bottom], 5)
+
             if not self.on_ground:  # применяем падение
                 self.velocity.y += self.gravity
-
-            if abs(self.velocity.x) != 0:
-                self.create_particle([self.rect.centerx, self.rect.bottom], 10)
 
             old_rect = self.rect.copy()  # передвигаем спрайт
             self.rect.move_ip(*self.velocity)
@@ -162,6 +163,8 @@ class Character(pygame.sprite.Sprite):
 
             if not self.on_ground and self.rect.bottom < 600:  # применяем падение
                 self.velocity.y += self.gravity
+
+            self.particles.update()
         else:
             self.kill()  # прячем игрока
 
@@ -334,6 +337,7 @@ if __name__ == "__main__":
         else:  # обновление экрана
             all_objs.update(dt)
             all_objs.draw(screen)
+            player.particles.draw(screen)
 
             player.on_ground = False
             for obj in all_objs:  # проверка нахождения на поверхности
