@@ -6,94 +6,109 @@ from time import sleep
 
 import pygame
 
-
 #  Импорт модулей
 
+GRAVITY = 0.6
+
+
+# создание констант
 
 class LVL_parser:
+    """Парсер уровней"""
     root_point = r"environments/"
 
     def __init__(self):
-        self.data = [self.unpack(self.root_point + file) for file in os.listdir(self.root_point)]
+        """инициализация"""
+        self.data = [self.unpack(self.root_point + file) for file in os.listdir(self.root_point)]  # импорт данных
 
     @staticmethod
     def unpack(file):
+        """обработка файла"""
         with open(file=file, mode="r") as source:
-            raw = source.read()
-            char = list(map(int, re.search(r"CHAR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))
-            door = list(map(int, re.search(r"DOOR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))
+            raw = source.read()  # сырые данные
+            char = list(
+                map(int, re.search(r"CHAR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))  # поиск данных персонажа
+            door = list(map(int, re.search(r"DOOR\s\|\s\{([\d;]+)\}", raw).group(1).split(';')))  # поиск данных двери
             blocks = [(m[0].lower(), tuple(map(int, m[1].split(';')))) for m in
-                      re.findall(r"(\w+)\s\|\s\{([\d;]+)\}", raw[raw.index("BLOCKS"):])]
-            group = pygame.sprite.Group(Character(char), Door(*door), *(Platform(size, pos) for size, pos in blocks))
-        return group
+                      re.findall(r"(\w+)\s\|\s\{([\d;]+)\}", raw[raw.index("BLOCKS"):])]  # поиск данных платформ
+            group = pygame.sprite.Group(Character(char), Door(*door), *(Platform(size, pos) for size, pos in
+                                                                        blocks))  # создание pygame группы, полученной из файла
+        return group  # возвращаем полученные данные
 
     def __iter__(self):
+        """делаем объект итерируемым"""
         yield from self.data
 
     def __len__(self):
+        """метод для работы со стоковым len()"""
         return len(self.data)
 
     def __getitem__(self, item):
+        """получение уровня по индексу файла"""
         try:
-            return self.data[item]
+            return self.data[item]  # если файл существует
         except IndexError:
-            raise FileNotFoundError(f"File {self.root_point + f"lvl_{item + 1}.lvl"} doesn`t exist!")
+            raise FileNotFoundError(
+                f"File {self.root_point + f"lvl_{item + 1}.lvl"} doesn`t exist!")  # поднимаем исключение, если уровень не реализован
 
 
 class ParticleSystem(pygame.sprite.Sprite):
     """Источник частиц"""
-    images = [pygame.transform.scale(pygame.image.load(r"sprites/particle.gif"), (scale, scale)) for scale in (4, 6, 8)]
+    images = [pygame.transform.scale(pygame.image.load(r"sprites/particle.gif"), (scale, scale)) for scale in
+              (4, 6, 8)]  # подгрузка изображений
 
     def __init__(self, pos, dx, dy):
         """Инициализация"""
-        super().__init__()
-        self.image = random.choice(self.images)
-        self.rect = self.image.get_rect()
+        super().__init__()  # инициализация родителя
+        self.image = random.choice(self.images)  # частица случайного размера
+        self.rect = self.image.get_rect()  # позиция частицы
+        self.velocity = pygame.math.Vector2(dx, dy)  # вектор скорости
+        self.rect.x, self.rect.y = pos  # позиционирование частицы
 
-        self.velocity = pygame.math.Vector2(dx, dy)
-        self.rect.x, self.rect.y = pos
-
-        self.gravity = player.gravity
+        self.gravity = GRAVITY  # задание гравитации
 
     def update(self):
-        self.velocity.y += self.gravity
-        self.rect.move_ip(*self.velocity)
+        """обновление позиции"""
+        self.velocity.y += self.gravity  # применение гравитации
+        self.rect.move_ip(*self.velocity)  # применение скорости
         if not (0 <= self.rect.x <= width and 0 <= self.rect.y <= height):
-            self.kill()
+            self.kill()  # уничтожаем частицу, если вышла за экран
 
 
 class BackGround(pygame.sprite.Sprite):
+    """спрайт заднего фона"""
+
     def __init__(self):
         """Создание заднего фона"""
-        super().__init__()
-        self.image = pygame.image.load("sprites/background.gif").convert_alpha()
-        self.rect = self.image.get_rect()
-        self.rect.left, self.rect.top = (0, 0)
+        super().__init__()  # инициализация родителя
+        self.image = pygame.image.load("sprites/background.gif").convert_alpha()  # применение альфа-канала
+        self.rect = self.image.get_rect()  # получение прямоугольника
+        self.rect.left, self.rect.top = (0, 0)  # помещение в верхний левый угол
 
 
 class Character(pygame.sprite.Sprite):
     """Спрайт игрока"""
-    images = [pygame.image.load(rf"sprites/character/sprite_{i}.gif") for i in range(1, 4)]
-    size = (50, 100)
+    images = [pygame.image.load(rf"sprites/character/sprite_{i}.gif") for i in range(1, 4)]  # подгрузка спрайтов
+    size = (50, 100)  # размер спрайта
 
     def __init__(self, pos):
         """Инициализация"""
-        super().__init__()
-        self.rect = pygame.Rect(pos, self.size)
+        super().__init__()  # инициализация родителя
+        self.rect = pygame.Rect(pos, self.size)  # создание прямоугольника
         self.start = pos  # сохраняем начальную позицию
-        self.img_r = self.images
-        self.img_l = [pygame.transform.flip(image, True, False) for image in self.images]  # отражаем картинки
+        self.img_r = self.images  # спрайты вправо
+        self.img_l = [pygame.transform.flip(image, True, False) for image in self.images]  # спрайты влево
         self.index = 0  # индекс текущего кадра
         self.image = self.images[self.index]
         self.velocity = pygame.math.Vector2(0, 0)  # создаём вектор скорости
         self.anim_time = 0.1  # время анимации
         self.current_time = 0  # текущее время
-        self.gravity = 0.6  # гравитация
+        self.gravity = GRAVITY  # гравитация
         self.jump_speed = -28  # высота прыжка
         self.on_ground = True  # нахождение в полёте
         self.show = True  # нужно ли показывать персонажа
         self.win = None  # флаг победы
-        self.particles = pygame.sprite.Group()
+        self.particles = pygame.sprite.Group()  # группа частиц
 
     def update_time_dependent(self, dt):
         sleep(0.06)  # задержка анимации
@@ -112,18 +127,19 @@ class Character(pygame.sprite.Sprite):
             self.image = self.images[self.index]
 
     def create_particle(self, pos, count):
-        for _ in range(count):
+        """создание частиц при ходьбе"""
+        for _ in range(count):  # задаём направление полёта для каждой частицы
             if self.velocity.x < 0:
                 particle = ParticleSystem(pos, random.randint(2, 4), random.randint(-8, -2))
             else:
                 particle = ParticleSystem(pos, random.randint(-4, -2), random.randint(-8, -2))
-            self.particles.add(particle)
+            self.particles.add(particle)  # добавляем частицу в группу
 
     def update(self, dt):
         if self.show:  # если спрайт виден
             self.update_time_dependent(dt)
 
-            if abs(self.velocity.x) > 0 and self.on_ground:
+            if abs(self.velocity.x) > 0 and self.on_ground:  # если спрайт идёт по поверхности
                 self.create_particle([self.rect.centerx, self.rect.bottom], 5)
 
             if not self.on_ground:  # применяем падение
@@ -143,7 +159,7 @@ class Character(pygame.sprite.Sprite):
                 self.win = False
                 self.show = False
 
-            for obj in all_objs:  # проверяем коллизии с другими обьектами
+            for obj in all_objs:  # проверяем коллизии с другими объектами
                 if isinstance(obj, Platform):
                     if old_rect.colliderect(obj.rect) and not self.rect.colliderect(obj.rect):
                         if self.velocity.y > 0 and old_rect.bottom <= obj.rect.top + abs(self.velocity.y):
@@ -164,7 +180,7 @@ class Character(pygame.sprite.Sprite):
             if not self.on_ground and self.rect.bottom < 600:  # применяем падение
                 self.velocity.y += self.gravity
 
-            self.particles.update()
+            self.particles.update()  # обновление частиц
         else:
             self.kill()  # прячем игрока
 
@@ -196,10 +212,10 @@ class Platform(pygame.sprite.Sprite):
 
     def __init__(self, kind: str, pos: tuple[int, int]):
         """инициализация платформы"""
-        super().__init__()
-        self.image = self.images[kind]
-        self.size = self.sizes[kind]
-        self.rect = pygame.Rect(pos, self.size)
+        super().__init__()  # инициализация родителя
+        self.image = self.images[kind]  # текущий спрайт
+        self.size = self.sizes[kind]  # текущая размерность
+        self.rect = pygame.Rect(pos, self.size)  # текущий прямоугольник
 
 
 class Door(pygame.sprite.Sprite):
@@ -207,18 +223,19 @@ class Door(pygame.sprite.Sprite):
         "close": pygame.image.load(r"sprites/door/door_close.gif"),
         "open": pygame.image.load(r"sprites/door/door_open.gif")
     }  # картинки разных состояний
-    size = (65, 115)
+    size = (65, 115)  # размерность
 
     def __init__(self, *pos):
         """создание необходимых атрибутов"""
-        super().__init__()
-        self.rect = pygame.Rect(pos, self.size)
-        self.image = self.images["close"]
-        self.is_open = False
-        self.open_time = 0
-        self.door_open_duration = 400
+        super().__init__()  # инициализация родителя
+        self.rect = pygame.Rect(pos, self.size)  # текущий прямоугольник
+        self.image = self.images["close"]  # текущее состояние двери
+        self.is_open = False  # флаг открытия
+        self.open_time = 0  # сколько уже открыто
+        self.door_open_duration = 400  # долгота открытия
 
     def update(self, dt):
+        """обновление двери"""
         if self.rect.colliderect(player.rect) and player.show and not self.is_open:  # если игрок дошёл до двери
             player.show = False
             player.win = True
@@ -226,7 +243,7 @@ class Door(pygame.sprite.Sprite):
             self.image = self.images["open"]
             self.open_time = pygame.time.get_ticks()
 
-        if self.is_open and (pygame.time.get_ticks() - self.open_time > self.door_open_duration):  # если пора закрытся
+        if self.is_open and (pygame.time.get_ticks() - self.open_time > self.door_open_duration):  # если пора закрыться
             self.is_open = False
             self.image = self.images["close"]
 
@@ -234,19 +251,19 @@ class Door(pygame.sprite.Sprite):
 class Button(pygame.sprite.Sprite):
     def __init__(self, text, pos, size):
         """инициализируем параметры"""
-        super().__init__()
-        self.image = pygame.Surface(size)
-        self.image.fill((241, 8, 150))
-        self.rect = self.image.get_rect(topleft=pos)
-        self.font = pygame.font.Font(None, 25)
-        self.text = text
+        super().__init__()  # инициализация родителя
+        self.image = pygame.Surface(size)  # текущий спрайт
+        self.image.fill((241, 8, 150))  # заливка
+        self.rect = self.image.get_rect(topleft=pos)  # текущий прямоугольник
+        self.font = pygame.font.Font(None, 25)  # инициализация шрифта
+        self.text = text  # запись текста
 
     def draw(self):
         """отрисовываем кнопку"""
-        pygame.draw.rect(screen, (241, 8, 150), self.rect)
-        text_surface = self.font.render(self.text, True, (0, 0, 0))
-        text_rect = text_surface.get_rect(center=self.rect.center)
-        screen.blit(text_surface, text_rect)
+        pygame.draw.rect(screen, (241, 8, 150), self.rect)  # отрисовка прямоугольника
+        text_surface = self.font.render(self.text, True, (0, 0, 0))  # рендер текста
+        text_rect = text_surface.get_rect(center=self.rect.center)  # прямоугольник текста
+        screen.blit(text_surface, text_rect)  # наложение картинок
 
     def is_clicked(self, mouse_pos):
         """если кнопка нажата"""
@@ -255,16 +272,16 @@ class Button(pygame.sprite.Sprite):
 
 if __name__ == "__main__":
     pygame.init()  # настройка окна
-    size = width, height = 800, 600
-    FPS = 60
-    pygame.display.set_caption("Reach the door")
-    pygame.display.set_icon(pygame.image.load("sprites/icon.gif"))
-    screen = pygame.display.set_mode(size)
+    size = width, height = 800, 600  # размерность
+    FPS = 60  # потолок кадров
+    pygame.display.set_caption("Reach the door")  # заголовок
+    pygame.display.set_icon(pygame.image.load("sprites/icon.gif"))  # иконка
+    screen = pygame.display.set_mode(size)  # основной экран
     clock = pygame.time.Clock()  # создаём часы для анимации
     bg = BackGround()  # задаём задний фон
 
-    parser = LVL_parser()
-    level = 0
+    parser = LVL_parser()  # парсер уровней
+    level = 0  # текущий уровень
 
     font = pygame.font.Font(None, 50)  # определение шрифта
 
@@ -272,8 +289,8 @@ if __name__ == "__main__":
 
     running = True  # основной цикл
     while running:
-        all_objs = parser[level]
-        player = all_objs.sprites()[0]
+        all_objs = parser[level]  # получение группы из уровня
+        player = all_objs.sprites()[0]  # спрайт игрока
         dt = clock.tick(FPS) / 1000  # изменение времени
         screen.blit(bg.image, bg.rect)  # добавление фона
 
@@ -328,16 +345,18 @@ if __name__ == "__main__":
                 screen.blit(text, (width // 2 - text.get_width() // 2, height // 2 - text.get_height() // 2 - 85))
                 btn_out = Button("Выход", (275, 400), (250, 100))
                 btn_out.draw()
-                if level != 2:
-                    btn_next = Button("Дальше", (275, 250), (250, 100))
-                    btn_next.draw()
-                else:
+                try:  # проверяем наличие продолжения
+                    parser[level + 1]
+                except FileNotFoundError:  # если такового не найдено
                     btn_rsrt = Button("Заново", (275, 250), (250, 100))
                     btn_rsrt.draw()
+                else:  # иначе предлагаем продолжить
+                    btn_next = Button("Дальше", (275, 250), (250, 100))
+                    btn_next.draw()
         else:  # обновление экрана
-            all_objs.update(dt)
-            all_objs.draw(screen)
-            player.particles.draw(screen)
+            all_objs.update(dt)  # обновление всего
+            all_objs.draw(screen)  # отрисовка экрана
+            player.particles.draw(screen)  # отрисовка частиц
 
             player.on_ground = False
             for obj in all_objs:  # проверка нахождения на поверхности
