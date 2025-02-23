@@ -27,6 +27,20 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="edit_button">
+        <property name="text">
+         <string>Измень выделенное</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="add_button">
+        <property name="text">
+         <string>Добавить позицию</string>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
    </layout>
