@@ -1,51 +1,41 @@
-import random
+import sqlite3
 import sys
 
-from PyQt6.QtGui import QPainter, QColor
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
+from PyQt6 import uic
+from PyQt6.QtWidgets import QApplication, QMainWindow, QMessageBox
 
 
-class CircleWidget(QWidget):
+class CoffeeApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.circles = []
-        self.drawButton = QPushButton('Нарисовать окружность', self)
-        self.drawButton.clicked.connect(self.draw_circle)
+        uic.loadUi('UI.ui', self)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.drawButton)
-        self.setLayout(layout)
+        self.load_data_button.clicked.connect(self.load_coffee_data)
 
-    def draw_circle(self):
-        diameter = random.randint(10, 100)
-        x = random.randint(0, self.width() - diameter)
-        y = random.randint(0, self.height() - diameter)
+    def load_coffee_data(self):
+        try:
+            connection = sqlite3.connect('coffee.sqlite')
+            cursor = connection.cursor()
+            cursor.execute("SELECT * FROM coffee")
+            rows = cursor.fetchall()
 
-        color = QColor(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+            # Очищаем предыдущие данные
+            self.coffee_list.clear()
 
-        self.circles.append((x, y, diameter, color))
-        self.update()
+            for row in rows:
+                coffee_info = f"ID: {row[0]}, Название: {row[1]}, Обжарка: {row[2]}, " \
+                              f"Тип: {row[3]}, Вкус: {row[4]}, Цена: {row[5]}, Объем: {row[6]}"
+                self.coffee_list.addItem(coffee_info)
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-
-        for (x, y, diameter, color) in self.circles:
-            painter.setBrush(color)
-            painter.drawEllipse(x, y, diameter, diameter)
-
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Рисование окружностей 2")
-
-        self.circleWidget = CircleWidget()
-        self.setCentralWidget(self.circleWidget)
+            connection.close()
+        except sqlite3.Error as e:
+            QMessageBox.critical(self, "Ошибка", f"Не удалось загрузить данные: {e}")
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    mainWin = MainWindow()
-    mainWin.resize(800, 800)
-    mainWin.show()
+    window = CoffeeApp()
+    window.setWindowTitle("Информация о кофе")
+    window.resize(600, 400)
+    window.show()
     sys.exit(app.exec())
